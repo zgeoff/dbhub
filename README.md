@@ -1,4 +1,7 @@
 > [!NOTE]  
+> Republished fork of [bytebase/dbhub](https://github.com/bytebase/dbhub) as `@zgeoff/dbhub` — all credit to the original authors.
+
+> [!NOTE]  
 > Brought to you by [Bytebase](https://www.bytebase.com/), open-source database DevSecOps platform.
 
 <p align="center">
