@@ -1,6 +1,6 @@
 {
   "name": "@zgeoff/dbhub",
-  "version": "0.23.0",
+  "version": "0.23.1",
   "description": "Minimal, token-efficient Database MCP Server for PostgreSQL, MySQL, SQL Server, SQLite, MariaDB",
   "repository": {
     "type": "git",

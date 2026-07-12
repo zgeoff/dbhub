@@ -1,3 +1,5 @@
+import { exec } from "child_process";
+import { promisify } from "util";
 import { Connector, ConnectorType, ConnectorRegistry, ExecuteOptions, ConnectorConfig } from "./interface.js";
 import { SSHTunnel } from "../utils/ssh-tunnel.js";
 import type { SSHTunnelConfig, SSHTunnelInfo } from "../types/ssh.js";
@@ -13,6 +15,8 @@ import { TUNNEL_ERROR_MARKER } from "../utils/error-classifier.js";
 // Singleton instance for global access
 let managerInstance: ConnectorManager | null = null;
 const AWS_IAM_TOKEN_REFRESH_MS = 14 * 60 * 1000; // refresh before 15-minute token expiry
+
+const execAsync = promisify(exec);
 
 /**
  * Manages database connectors and provides a unified interface to work with them
@@ -142,6 +146,20 @@ export class ConnectorManager {
    */
   private async connectSource(source: SourceConfig): Promise<void> {
     const sourceId = source.id;
+
+    // Run init_command before touching the database, so it can provision the target the DSN points at
+    if (source.init_command) {
+      console.error(`  - ${sourceId}: running init_command`);
+      try {
+        const { stdout, stderr } = await execAsync(source.init_command);
+        if (stdout.trim()) console.error(stdout.trimEnd());
+        if (stderr.trim()) console.error(stderr.trimEnd());
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Source '${sourceId}': init_command failed: ${message}`);
+      }
+    }
+
     // Build DSN from source config
     const dsn = await this.buildConnectionDSN(source);
     console.error(`  - ${sourceId}: ${redactDSN(dsn)}`);
