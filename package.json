@@ -1,6 +1,6 @@
 {
   "name": "@zgeoff/dbhub",
-  "version": "0.23.3",
+  "version": "0.23.4",
   "description": "Minimal, token-efficient Database MCP Server for PostgreSQL, MySQL, SQL Server, SQLite, MariaDB",
   "repository": {
     "type": "git",
@@ -48,7 +48,7 @@
     "@iarna/toml": "2.2.5",
     "@modelcontextprotocol/sdk": "1.29.0",
     "dotenv": "16.5.0",
-    "express": "4.21.2",
+    "express": "5.2.1",
     "ssh-config": "5.0.3",
     "ssh2": "1.16.0",
     "zod": "3.25.64"
@@ -67,7 +67,7 @@
     "@testcontainers/mssqlserver": "11.0.3",
     "@testcontainers/mysql": "11.0.3",
     "@testcontainers/postgresql": "11.0.3",
-    "@types/express": "4.17.23",
+    "@types/express": "5.0.6",
     "@types/mssql": "9.1.7",
     "@types/node": "22.15.31",
     "@types/pg": "8.15.4",
@@ -100,11 +100,9 @@
       "fast-uri": ">=3.1.2",
       "fast-xml-parser@>=5.0.0 <5.5.6": ">=5.5.6",
       "jws@<3.2.3": ">=3.2.3",
-      "path-to-regexp@<0.1.13": ">=0.1.13 <0.2.0",
       "path-to-regexp@>=8.0.0 <8.4.0": ">=8.4.0",
       "vite>picomatch": ">=4.0.4",
       "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
-      "qs@<6.14.1": ">=6.14.2",
       "ajv@>=8.0.0 <8.18.0": ">=8.18.0",
       "postcss@<8.5.10": ">=8.5.10",
       "yaml@>=2.0.0 <2.8.3": ">=2.8.3",
