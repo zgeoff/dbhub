@@ -1,0 +1,143 @@
+name: main
+
+on:
+  push:
+    branches: [main]
+  # The recovery path for a release that tagged but did not publish, and the
+  # run that a push run starts at a tag it cannot publish itself. Dispatch it
+  # at a release tag, such as v0.23.5. A version npm holds already is skipped,
+  # so a re-run is safe.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A release takes two pushes to main, through the shared release-please job
+  # in zgeoff/tools:
+  # - after a fix: or feat: commit lands, release-please opens or updates the
+  #   release PR (version bump and changelog), which waits for a person to
+  #   merge it.
+  # - the run of that merge's push tags the merge commit, and the publish job
+  #   below publishes it to npm.
+  #
+  # With no release App configured, release-please uses GITHUB_TOKEN, so the
+  # release PR gets no pull_request checks; the publish job runs the build and
+  # tests on the release commit before it publishes.
+  release:
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: zgeoff/tools/.github/workflows/release-please.yml@46b52f288f7390a7912e1a4ad4241ad918964560 # main
+    with:
+      app-id: ${{ vars.RELEASE_APP_ID }}
+      merge: false
+      # release-please names the release PR's branch after the package's
+      # component, so a merge or sync step looks for that branch.
+      release-branch: release-please--branches--main--components--dbhub
+      # The default sync command runs bun, and this repo uses pnpm.
+      # pnpm-lock.yaml does not record the package's own version, so a
+      # release-please bump leaves it valid and the release PR needs no repair.
+      sync-command: ''
+    secrets:
+      app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+  # npm's trusted publisher names this file, so the publish stays in it.
+  # Provenance records the run's commit as the package's source, so a run
+  # publishes only the release whose tag points at its own commit.
+  # release-please reads the repository's current state, not the run's commit,
+  # so a push run that started before the release PR merged can tag the merge
+  # commit. That run dispatches this workflow at the tag, and the dispatched
+  # run publishes.
+  publish:
+    needs: release
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'workflow_dispatch' ||
+      (needs.release.result == 'success' && needs.release.outputs.releases_created == 'true')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      # Trusted publishing (OIDC). No npm token exists in this repository.
+      id-token: write
+      # Dispatches this workflow at a tag that points at another commit.
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pick the run that publishes the release
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$GITHUB_REF_TYPE" != tag ]; then
+              echo "::error::Dispatch this workflow at a release tag, not at $GITHUB_REF"
+              exit 1
+            fi
+            tag=$GITHUB_REF_NAME
+          else
+            tag=$RELEASE_TAG
+            git fetch --no-tags --depth=1 origin "refs/tags/$tag:refs/tags/$tag"
+            tagged=$(git rev-parse "$tag^{commit}")
+            if [ "$tagged" != "$GITHUB_SHA" ]; then
+              echo "$tag points at $tagged, not this run's commit $GITHUB_SHA; dispatching a run at $tag"
+              gh workflow run main.yml --repo "$GITHUB_REPOSITORY" --ref "$tag"
+              echo "here=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$tag" ]; then
+            echo "::error::package.json holds $version, but the release tag is $tag"
+            exit 1
+          fi
+          echo "here=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Reads the pnpm version from package.json's packageManager field.
+      - if: steps.pick.outputs.here == 'true'
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      # Trusted publishing needs npm 11.5.1 or later, which Node 24 bundles.
+      # Keep the bundled npm: npm 12.0.0's publish --provenance fails with
+      # "Cannot find module 'sigstore'". No registry-url: setup-node would then
+      # write an .npmrc that expects a token.
+      - if: steps.pick.outputs.here == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - if: steps.pick.outputs.here == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.pick.outputs.here == 'true'
+        run: pnpm run build
+      - if: steps.pick.outputs.here == 'true'
+        run: pnpm run test:unit
+      - if: steps.pick.outputs.here == 'true'
+        run: pnpm run test:build
+
+      - name: Check the registry for the version
+        id: registry
+        if: steps.pick.outputs.here == 'true'
+        env:
+          VERSION: ${{ steps.pick.outputs.version }}
+        run: |
+          name=$(node -p "require('./package.json').name")
+          if npm view "$name@$VERSION" version >/dev/null 2>&1; then
+            echo "$name@$VERSION is on npm already; skipping the publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # npm, not pnpm, publishes: trusted publishing (OIDC) is an npm CLI
+      # feature.
+      - name: Publish
+        if: steps.registry.outputs.publish == 'true'
+        run: npm publish --provenance --access public
