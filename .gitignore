@@ -93,3 +93,6 @@ $RECYCLE.BIN/
 *.exe
 *.o
 *.so 
+# Local work
+.worktrees/
+.scratch/
