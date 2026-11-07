@@ -1,6 +1,6 @@
 {
   "name": "@zgeoff/dbhub",
-  "version": "0.23.4",
+  "version": "0.23.5",
   "description": "Minimal, token-efficient Database MCP Server for PostgreSQL, MySQL, SQL Server, SQLite, MariaDB",
   "repository": {
     "type": "git",
@@ -51,7 +51,7 @@
     "express": "5.2.1",
     "ssh-config": "5.0.3",
     "ssh2": "1.16.0",
-    "zod": "3.25.64"
+    "zod": "4.6.7"
   },
   "optionalDependencies": {
     "@aws-sdk/rds-signer": "3.1079.0",
