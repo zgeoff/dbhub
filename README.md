@@ -126,7 +126,7 @@ pnpm dev
 pnpm build && pnpm start --transport stdio --dsn "postgres://user:password@localhost:5432/dbname"
 ```
 
-See [Testing](.claude/skills/testing/SKILL.md) and [Debug](https://dbhub.ai/config/debug).
+See [Testing](.agents/skills/testing/SKILL.md) and [Debug](https://dbhub.ai/config/debug).
 
 ## Contributors
 
