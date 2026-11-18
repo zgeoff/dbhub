@@ -156,7 +156,7 @@ DBHub supports three configuration methods (in priority order):
 
 See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
-For detailed guidance on running and troubleshooting tests, refer to the [testing skill](.claude/skills/testing/SKILL.md). This skill is automatically activated when working with tests, test failures, or Docker/database container issues.
+For detailed guidance on running and troubleshooting tests, refer to the [testing skill](.agents/skills/testing/SKILL.md). This skill is automatically activated when working with tests, test failures, or Docker/database container issues.
 
 Key points:
 - Unit tests for individual components and utilities
